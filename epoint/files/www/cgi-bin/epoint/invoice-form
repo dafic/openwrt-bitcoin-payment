@@ -1,0 +1,63 @@
+#!/usr/bin/lua
+-- Copyright (C) 2010 ePoint Systems Ltd.
+
+
+i18n = require("epoint.i18n")
+require("luci.template")
+protocol = require("luci.http.protocol")
+
+if os.getenv("REQUEST_METHOD") == "POST" then
+    local postdata = io.read()
+    local params = protocol.urldecode_params(postdata)
+
+    local name = params["name"] or ""
+    local address = params["address"] or ""
+    local billing_data = protocol.urlencode_params{name = name, address = address}
+
+    if params["clear"] then
+        require("luci.sys")
+        local date = luci.sys.exec("date -u +'%a, %d-%b-%Y %H:%M:%S GMT'")
+        date = date:sub(1, #date - 1)
+        io.write(
+            "Status: 303 See Other\r\n" ..
+            "Location: /cgi-bin/epoint/form.sh\r\n" ..
+            string.format("Set-Cookie: billing_data=; expires=%s\r\n", date) ..
+            "\r\n")
+        os.exit(0)
+    end
+
+    io.write("Status: 303 See Other\r\n")
+    io.write("Location: /cgi-bin/epoint/invoice-form?check_cookie=1\r\n")
+    io.write(string.format("Set-Cookie: billing_data=%s\r\n", billing_data))
+    io.write("\r\n")
+    os.exit(0)
+end
+
+local cookies = os.getenv("HTTP_COOKIE") or ""
+local cookie = cookies:match("billing_data=([^;]+);") or cookies:match("billing_data=(.+)$")
+local billing_data = protocol.urldecode_params(cookie or "")
+
+-- non-local, exported to template
+billing_name = billing_data["name"] or ""
+billing_address = billing_data["address"] or ""
+cookies_disabled = false
+
+if protocol.urldecode_params(os.getenv("QUERY_STRING"))["check_cookie"] then
+    if cookie then
+        io.write("Status: 303 See Other\r\n")
+        io.write("Location: /cgi-bin/epoint/form\r\n")
+        io.write("\r\n")
+        os.exit(0)
+    end
+    cookies_disabled = true
+end
+
+i18n.cgi_select_language()
+
+io.write("Content-type: text/html; charset=utf-8\r\n")
+i18n.cgi_set_language_cookie()
+io.write("\r\n")
+
+write = io.write
+luci.template.context.viewns = {}
+luci.template.render("epoint/client/invoice")

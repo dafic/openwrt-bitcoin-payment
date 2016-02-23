@@ -1,0 +1,56 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 ePoint Systems Ltd
+
+START=50
+
+. /usr/lib/epoint-fixip/lock
+
+RUN_FLAG=/var/run/epoint-fixip
+
+clear_rules() {
+	while iptables -t nat -D PREROUTING -j FIXIPDNAT; do : ; done
+	while iptables -t nat -D POSTROUTING -j FIXIPSNAT; do : ; done
+	while iptables -t filter -D FORWARD -j FIXIPFORWARD; do : ; done
+}
+
+start() {
+	if ! grep -q epoint-fixip /etc/firewall.user > /dev/null; then
+		echo '[ -f /var/run/epoint-fixip ] && /etc/init.d/epoint-fixip start' >> /etc/firewall.user
+	fi
+
+	iptables -t nat -N FIXIPDNAT
+	iptables -t nat -N FIXIPSNAT
+	iptables -t filter -N FIXIPFORWARD
+
+	clear_rules
+
+	iptables -t nat -I PREROUTING -j FIXIPDNAT
+	iptables -t nat -I POSTROUTING -j FIXIPSNAT
+	iptables -t filter -I FORWARD -j FIXIPFORWARD
+
+	touch $ACLLOCK
+	touch $RUN_FLAG
+
+	{
+		crontab -l
+		(crontab -l | grep -q expire-fixip-rules) || echo '0 3 * * * /usr/sbin/expire-fixip-rules'
+	} | crontab -
+
+	/usr/sbin/update-fixip-rules
+}
+
+stop() {
+	clear_rules
+
+	crontab -l | grep -v expire-fixip-rules | crontab -
+
+	rm -f $ACLLOCK
+	rm -f $RUN_FLAG
+
+	iptables -t nat -F FIXIPDNAT
+	iptables -t nat -X FIXIPDNAT
+	iptables -t nat -F FIXIPSNAT
+	iptables -t nat -X FIXIPSNAT
+	iptables -t filter -F FIXIPFORWARD
+	iptables -t filter -X FIXIPFORWARD
+}

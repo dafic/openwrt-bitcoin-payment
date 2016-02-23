@@ -1,0 +1,44 @@
+#!/usr/bin/lua
+local protocol = require("luci.http.protocol")
+local invoice = require("epoint.invoice")
+local util = require("epoint.util")
+local mod = require("epoint.invoice.hu")
+
+local function authok()
+	require("uci")
+	auth = os.getenv('HTTP_AUTHORIZATION')
+	if auth and auth:match("^Basic ") then
+		up = util.b64decode(auth:sub(7))
+		if up == uci.get("epoint-invoice.config.userpass") then
+			return true
+		end
+	end
+	return false
+end
+
+if not authok() then
+	io.write(
+	"Status: 401 Authorization Required\r\n" ..
+	"Content-Type: text/plain; charset=UTF-8\r\n" ..
+	"WWW-Authenticate: Basic realm=\"invoice auth\"\r\n" ..
+	"\r\n")
+	os.exit(1)
+end
+
+params = protocol.urldecode_params(os.getenv("QUERY_STRING"))
+t = invoice.getsn(params.sn)
+if t == nil then
+	io.write(
+		"Status: 404 Not found\r\n" ..
+		"Content-Type: text/plain\r\n" ..
+		"\r\n" ..
+		"Not found\r\n")
+	os.exit(1)
+end
+
+io.write(
+	"Status: 200 OK\r\n" ..
+	"Content-Type: text/html; charset=UTF-8\r\n" ..
+	"\r\n")
+
+io.write(mod.render(t))

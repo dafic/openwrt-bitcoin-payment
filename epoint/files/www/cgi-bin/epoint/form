@@ -1,0 +1,47 @@
+#!/usr/bin/lua
+-- Copyright (C) 2010 ePoint Systems Ltd.
+
+local protocol = require("luci.http.protocol")
+require("luci.template")
+require("epoint.i18n")
+require("uci")
+local tariff=require("epoint.tariff")
+
+-- crond dies sometimes
+os.execute("(pgrep crond || /etc/init.d/cron start) > /dev/null")
+
+request_params = protocol.urldecode_params(os.getenv("QUERY_STRING") or "")
+redirect_url = request_params and request_params["G"] or ""
+request_path = os.getenv("REQUEST_URI") or ""
+local n = request_path:find("?")
+if n then
+	request_path = request_path:sub(1,n-1)
+end
+action = "/cgi-bin/epoint/grant"
+
+local cookies = os.getenv("HTTP_COOKIE") or ""
+local cookie = cookies:match("billing_data=([^;]+);") or cookies:match("billing_data=(.+)$")
+billing_data = protocol.urldecode_params(cookie or "")
+if not (billing_data.name and billing_data.address) or
+  #billing_data.name == 0 or #billing_data.address == 0 then
+	billing_data = nil
+end
+
+minuterate = uci.get('epoint.config.tariff') or '-'
+-- month == year/12
+onemonth = tostring(tariff.payment(2629728)) or '-'
+oneweek = tostring(tariff.payment(604800)) or '-'
+oneday = tostring(tariff.payment(86400)) or '-'
+onehour = tostring(tariff.payment(3600)) or '-'
+
+epoint.i18n.cgi_select_language()
+
+io.write(
+	"Status: 402 Payment Required\r\n" ..
+	"Content-Type: text/html; charset=utf-8\r\n")
+epoint.i18n.cgi_set_language_cookie()
+io.write("\r\n")
+
+write = io.write
+luci.template.context.viewns = {}
+luci.template.render("epoint/client/form")

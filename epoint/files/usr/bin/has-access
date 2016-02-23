@@ -1,0 +1,15 @@
+#!/usr/bin/lua
+
+local acl = require("epoint.acl")
+
+if not arg[1] then
+	io.stderr:write("usage: has-access remoteaddr\n")
+	os.exit(1)
+end
+
+local addr = acl.getaddr(arg[1])
+local ok, expire = acl.hasaccess(addr)
+if not ok then
+	os.exit(1)
+end
+print(expire or "x")

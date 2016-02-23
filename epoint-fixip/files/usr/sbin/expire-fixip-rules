@@ -1,0 +1,6 @@
+#!/usr/bin/lua
+
+acl = require("epoint.fixip.acl")
+if acl.dropold(os.time()) then
+	os.execute("/usr/sbin/update-fixip-rules")
+end

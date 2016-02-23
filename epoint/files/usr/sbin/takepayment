@@ -1,0 +1,109 @@
+#!/usr/bin/lua
+
+local acl = require("epoint.acl")
+local protocol = require('epoint.protocol')
+require('uci')
+
+local now = os.time()
+local acltype = arg[1]
+local addr = acl.getaddr(arg[2] or '')
+local dt = tonumber(arg[3])
+local rand = arg[4]
+local amount = tonumber(arg[5])
+local oldrand = arg[6]
+local oldvalue = -1
+local target = uci.get('epoint.config.target')
+if oldrand and oldrand == '' then
+	oldrand = nil
+end
+
+-- 'acltype addr dt' is for rollback
+
+if not dt or not rand or not amount then
+	io.stderr:write("usage: takepayment acltype addr dt rand amount [oldrand]\n")
+	os.exit(1)
+end
+
+-- TODO: multiple grant-access/expire-rule/topup/.. on the same address
+
+local function rollback()
+	-- TODO: put oldrand back to acl?
+	local a = acl
+	local r = rand
+	if acltype=='local' then
+		a = require("epoint.localacl")
+		r = nil
+	elseif acltype=='roam' then
+		a = require('epoint.roam')
+		r = nil
+	end
+	if not a.topup(addr, now, -dt, r) then
+		-- topup failed retry (roam may need it)
+		return rollback
+	end
+	return nil
+end
+
+local function draw()
+	local c = protocol.obligation_transfer(rand, target, amount)
+	if not c then
+		-- network error
+		return draw
+	end
+	if c.VALUE then
+		-- success
+		return nil
+	end
+	-- bad rand
+	return rollback
+end
+
+local function drawold()
+	local fpr = protocol.getfpr(rand)
+	if not fpr then
+		-- should not happen..
+		return nil
+	end
+	c = protocol.obligation_transfer(oldrand, fpr, oldvalue)
+	if not c then
+		-- network error
+		return drawold
+	end
+	if c.VALUE then
+		-- success
+		return nil
+	end
+	-- invalid oldrand: retry verification
+	return verifyold
+end
+
+local function verifyold()
+	if oldrand == nil then
+		-- no oldrand
+		return nil
+	end
+	local c = {value = -1}
+	local fpr = protocol.getfpr(oldrand)
+	if fpr then
+		c = protocol.verify(fpr)
+	end
+	if not c then
+		-- network error
+		return verifyold
+	end
+	if c.value <= 0 then
+		-- invalid rand
+		return nil
+	end
+	oldvalue = c.value
+	return drawold
+end
+
+-- a task is a statemachine that returns a function representing
+-- the next state or nil at the end
+local tasks = {draw, verifyold}
+while next(tasks) do
+	for k,v in pairs(tasks) do
+		tasks[k] = v()
+	end
+end

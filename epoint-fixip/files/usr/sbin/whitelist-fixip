@@ -1,0 +1,66 @@
+#!/bin/sh
+# Copyright (C) 2009 ePoint Systems Ltd
+
+ADDR=$2
+COMMENT="$3"
+
+. /usr/lib/epoint-fixip/lock
+. /usr/lib/epoint-fixip/tariffs
+
+add() {
+    acl_lock
+    awk -v addr=$ADDR '
+    !/^[[:space:]]*#/ && $1 == addr && $2 !~ /[0-9]+/ {
+        exit(1)
+    }' `acl_files`
+    if [ "$?" = "0" ]; then
+        acl=`parse_tariffs | head -n1`
+        if [ -n "$COMMENT" ]; then
+            echo "$ADDR # $COMMENT" >> $acl
+        else
+            echo $ADDR >> $acl
+        fi
+        RETCODE=0
+    else
+        echo "Address already in white list." >&2
+        RETCODE=1
+    fi
+    acl_unlock
+    update-fixip-rules
+    exit $RETCODE
+}
+
+remove() {
+    acl_lock
+    TMP=$ACLLOCK.tmp
+    for acl in `acl_files`; do
+        awk -v addr=$ADDR '
+        !/^[[:space:]]*#/ && $1 == addr && $2 !~ /[0-9]+/ {
+            next
+        }
+        { print $0 }' $acl > $TMP
+        mv -f $TMP $acl
+    done
+    acl_unlock
+    update-fixip-rules
+    exit 0
+}
+
+list() {
+    acl_lock
+    awk '!/^[[:space:]]*#/ && $2 !~ /[0-9]+/ { print }' `acl_files`
+    acl_unlock
+    exit 0
+}
+
+usage() {
+    echo "Usage: $0 add|remove <address> [comment]"
+    exit 1
+}
+
+case "$1" in
+    add) add ;;
+    remove) remove ;;
+    ""|list) list ;;
+    *) usage ;;
+esac

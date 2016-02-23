@@ -1,0 +1,8 @@
+#!/usr/bin/lua
+
+i18n = require("epoint.i18n")
+
+epoint.i18n.cgi_select_language()
+args = {select(2, unpack(arg))}
+
+print(string.format(i18n.translate(arg[1], unpack(args)), unpack(args)))

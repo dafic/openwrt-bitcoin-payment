@@ -1,0 +1,57 @@
+#!/bin/sh
+
+grep -q epoint $IPKG_INSTROOT/etc/services || \
+    echo 'epoint 8080/tcp' >> $IPKG_INSTROOT/etc/services
+
+if [ -n "$IPKG_INSTROOT" ]; then
+    touch $IPKG_INSTROOT/etc/epoint_firstboot
+
+    CONF="$IPKG_INSTROOT/etc/opkg.conf"
+    # XXX This is an ugly hack. We should force offline installation of opkg
+    # to happen before us, or fetch and modify opkg.conf somehow.
+    if [ -f "$CONF" ]; then
+        grep -q epoint "$CONF" || \
+            echo 'src epoint http://www.epointsystem.org/openwrt/backfire/ar71xx/packages' >> "$CONF"
+    else
+        cat > "$CONF" <<EOF
+src epoint http://www.epointsystem.org/openwrt/backfire/ar71xx/packages
+dest root /
+dest ram /tmp
+lists_dir ext /var/opkg-lists
+option overlay_root /overlay
+EOF
+    fi
+
+    mkdir -p $IPKG_INSTROOT/etc/uci-defaults
+    cat > $IPKG_INSTROOT/etc/uci-defaults/epoint <<DATA
+#!/bin/sh
+
+uci batch <<-EOF
+    set luci.main.mediaurlbase=/luci-static/epoint
+    set luci.flash_keep.epoint_db=/etc/epoint
+    set luci.flash_keep.epoint_templates=/usr/lib/epoint/templates
+    set luci.flash_keep.epoint_static=/www/epoint-static
+    commit
+EOF
+DATA
+    chmod 755 $IPKG_INSTROOT/etc/uci-defaults/epoint
+fi
+
+if [ -z "$IPKG_INSTROOT" ]; then
+    . /etc/functions.sh
+    for m in /etc/modules.d/*ipt*; do
+        load_modules `basename $m`
+    done
+
+    rm -f /tmp/luci-indexcache
+    rm -f /tmp/luci-modulecache/*
+    rm -rf /tmp/luci-templatecache/*
+
+    /etc/init.d/xinetd enable
+    /etc/init.d/xinetd restart
+    /etc/init.d/epoint enable
+    /etc/init.d/epoint start
+
+    ACTION=ifup /etc/hotplug.d/iface/40-hotspot-dns
+fi
+exit 0

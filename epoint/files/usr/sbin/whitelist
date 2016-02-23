@@ -1,0 +1,73 @@
+#!/usr/bin/lua
+
+local acl = require("epoint.acl")
+require('uci')
+local localacl = require("epoint.localacl")
+
+local roam = nil
+if uci.get('epoint.scada.user') then
+	local ok, r = pcall(require, "epoint.roam")
+	roam = ok and r or nil
+end
+local persist = roam or localacl
+
+local cmd = arg[1]
+local addr = arg[2]
+local comment = arg[3]
+
+local function usage()
+	io.stderr:write("usage: whitelist [add addr comment|remove addr|list]\n")
+	os.exit(1)
+end
+local function errinternal()
+	io.stderr:write("internal error\n")
+	os.exit(1)
+end
+
+if not cmd then
+	cmd = "list"
+end
+
+-- TODO: check return values for network errors
+
+local function list(persist)
+	t, code, err = persist.unlimited()
+	if not t then
+		if code and err then
+			io.stderr:write(string.format("%s %s\n", code, err))
+		end
+		errinternal()
+	end
+	for k,v in pairs(t) do
+		io.stdout:write(string.format("%s # %s\n", k, v.comment or ""))
+	end
+end
+
+if cmd == "list" then
+	list(persist)
+	-- list localacl as well
+	if persist ~= localacl then
+		list(localacl)
+	end
+	os.exit(0)
+end
+
+if not addr then
+	usage()
+end
+addr = acl.getaddr(addr)
+if addr:match("^[1-2]?[0-9]?[0-9]\.[1-2]?[0-9]?[0-9]\.[1-2]?[0-9]?[0-9]\.[1-2]?[0-9]?[0-9]$") then
+	persist = localacl
+end
+
+if cmd == "add" then
+	if not persist.topup(addr, 0, nil, comment) then
+		errinternal()
+	end
+elseif cmd == "remove" then
+	persist.remove(addr)
+else
+	usage()
+end
+
+os.execute("/usr/sbin/update-rules")

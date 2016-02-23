@@ -1,0 +1,159 @@
+#!/usr/bin/lua
+-- Copyright (C) 2010 ePoint Systems Ltd.
+
+local http = require("luci.http.protocol")
+local protocol = require("epoint.protocol")
+local acl = require("epoint.acl")
+require("luci.template")
+require("epoint.i18n")
+
+epoint.i18n.cgi_select_language()
+write = io.write
+luci.template.context.viewns = {}
+
+local function err(msg, details)
+	io.write(
+		"Status: 403 Forbidden\r\n"..
+		"Content-Type: text/html; charset=utf-8\r\n")
+	epoint.i18n.cgi_set_language_cookie()
+	io.write("\r\n")
+	ERROR = msg
+	ERROR_DETAILS = details
+	QUERY = QUERY or ""
+	luci.template.render("epoint/client/error")
+	os.exit(1)
+end
+
+local function getparams()
+	local method = os.getenv("REQUEST_METHOD")
+	if method ~= "POST" then
+		err("Missing parameters", "Please submit the form properly.")
+	end
+	local n = tonumber(os.getenv("CONTENT_LENGTH")) or 4096
+	local s = io.read(n)
+	local params = http.urldecode_params(s)
+	if not params then
+		err("Invalid parameters", "Please submit the form properly.")
+	end
+	return params
+end
+
+local function grantaccess(rand)
+	local addr = acl.getaddr(os.getenv("REMOTE_ADDR"))
+	if not addr then
+		err("Internal error", "")
+	end
+	local ok, expire, r = acl.hasaccess(addr)
+	if ok and not r then
+		-- whitelisted or extra acl
+		-- TODO: allow expiring extra acls to register a multiuserand..
+		return
+	end
+	if not rand == "password" then
+		err("Invalid RAND", "Submitted RAND had bad format.")
+	end
+	local code = os.execute(string.format("/usr/sbin/grant-access %s '%s'",
+	  addr, rand))
+	if code == 2*256 then
+		err("Network error", "")
+	elseif code == 3*256 then
+		err("Insufficient payment", "")
+	elseif code ~= 0 then
+		err("Internal error", "")
+	end
+end
+
+local function topup(rand, payment)
+	local addr = acl.getaddr(os.getenv("REMOTE_ADDR"))
+	if not addr then
+		err("Internal error", "")
+	end
+	if not rand:match("^[a-zA-Z0-9/+]+=*$") then
+		err("Invalid RAND", "Submitted RAND had bad format.")
+	end
+	local code = os.execute(string.format("/usr/sbin/topup %s '%s' %s",
+	  addr, rand, payment))
+	if code == 2*256 then
+		err("Network error", "")
+	elseif code == 3*256 then
+		err("Insufficient payment", "")
+	elseif code ~= 0 then
+		err("Internal error", "")
+	end
+end
+
+local function invoice(payment)
+	local billinglog = "/etc/epoint/billing.log"
+	local lockfile = "/var/lock/billinglog"
+	local cookies = os.getenv("HTTP_COOKIE") or ""
+	local cookie = cookies:match("billing_data=([^;]+);") or cookies:match("billing_data=(.+)$")
+	local billing_data = http.urldecode_params(cookie or "")
+	if not (billing_data.name and billing_data.address) or
+	   #billing_data.name == 0 or #billing_data.address == 0 then
+		return
+	end
+	local currency=io.popen("ept-convert ".. payment .." EPT"):read()
+	if not currency:match("^[0-9.]+ [A-Z]+$") then
+		return
+	end
+	return epoint.scope.bracket(io.open(lockfile, "w"), io.close, function(lock)
+		epoint.util.flock(lock, "x")
+		local f = io.popen("tail -n 1 " .. billinglog)
+		if not f then
+			return
+		end
+		local lastline = f:read() or ""
+		f:close()
+		local sn = tonumber(lastline:match("sn=([0-9]+)")) or
+			uci.get("epoint.config.invoicesn") or 0
+		sn = sn+1
+		f = io.open(billinglog, "a")
+		if not f then
+			return
+		end
+		f:write(string.format(
+			"%s&timestamp=%s&payment=%s&currency=%s&sn=%s\n",
+			cookie,
+			os.time(),
+			payment,
+			currency:gsub(" ","%%20"),
+			sn))
+		f:close()
+		return true
+	end)
+end
+
+params = getparams()
+local url = params["G"] or ""
+QUERY = ""
+if url ~= "" then
+	QUERY = "?G=" .. protocol.urlencode(url)
+end
+local rand = params["B"] and params["B"]:gsub("%s", "") or ""
+local pay = tonumber(params["pay"]) or 0
+
+if rand == "" then
+	-- submitted empty form: go directly to the redirect url
+	if url == "" then
+		url = "/cgi-bin/epoint/status"
+	end
+else
+	if pay == 0 then
+		-- minute rate
+		grantaccess(rand)
+	else
+		-- longterm payment
+		topup(rand, pay)
+		invoice(pay)
+	end
+	url = "/cgi-bin/epoint/status" .. QUERY
+end
+
+io.write(
+	"Status: 303 See Other\r\n" ..
+	"Content-Type: text/html; charset=utf-8\r\n" ..
+	"Location: " .. url .. "\r\n")
+epoint.i18n.cgi_set_language_cookie()
+io.write(
+	"\r\n" ..
+	"<html><body><a href=\"" .. url .. "\">see other</a></body></html>\n")

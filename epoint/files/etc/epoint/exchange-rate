@@ -1,0 +1,6 @@
+# N <currency_1> = M <currency_2>
+# where <currency> is ISO 4217 3-letter currency code or 'EPT';
+# N and M are integer
+# all spaces are required
+# first line should contain the exchange rate of default currency vs EPT
+1 EUR = 1000 EPT

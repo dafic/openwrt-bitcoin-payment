@@ -1,0 +1,8 @@
+#!/bin/sh
+
+rm -f /tmp/luci-indexcache
+rm -f /tmp/luci-modulecache/*
+rm -rf /tmp/luci-templatecache/*
+
+/etc/init.d/epoint stop
+/etc/init.d/epoint disable

@@ -1,0 +1,84 @@
+#!/usr/bin/lua
+
+local acl = require("epoint.acl")
+local tariff = require("epoint.tariff")
+local protocol = require('epoint.protocol')
+require('uci')
+local localacl = require("epoint.localacl")
+local roam = nil
+if uci.get('epoint.scada.user') then
+	local ok, r = pcall(require, "epoint.roam")
+	roam = ok and r or nil
+end
+local persist = roam or localacl
+local now = os.time()
+local addr = arg[1]
+local rand = arg[2]
+local payment = tonumber(arg[3])
+local target = uci.get('epoint.config.target')
+
+local function errinternal()
+	io.stderr:write("internal error\n")
+	os.exit(1)
+end
+local function errnetwork()
+	io.stderr:write("network error\n")
+	os.exit(2)
+end
+local function errinvalid()
+	io.stderr:write("invalid rand\n")
+	os.exit(3)
+end
+
+if not payment or not rand then
+	io.stderr:write("usage: topup addr rand payment\n")
+	os.exit(1)
+end
+if not target then
+	io.stderr:write("target is not set\n")
+	errinternal()
+end
+local dt = tariff.time(payment)
+if dt == 0 then
+	io.stderr:write("payment below minimum\n")
+	os.exit(3)
+end
+addr = acl.getaddr(addr)
+if addr:match("^[1-2]?[0-9]?[0-9]\.[1-2]?[0-9]?[0-9]\.[1-2]?[0-9]?[0-9]\.[1-2]?[0-9]?[0-9]$") then
+	persist = localacl
+end
+-- assume that addr is already roam queried
+local ok, expire = acl.hasaccess(addr)
+if ok and not expire then
+	io.stderr:write("whitelisted\n")
+	os.exit(0)
+end
+local fpr = protocol.getfpr(rand)
+if not fpr then
+	errinvalid()
+end
+local c = protocol.verify(fpr)
+if not c then
+	errnetwork()
+end
+local value = tonumber(c.VALUE)
+if not value or value < payment then
+	errinvalid()
+end
+if not persist.topup(addr, now, dt) then
+	-- TODO: topup failed?
+	errinternal()
+end
+
+local acltype = persist == localacl and 'local' or 'roam'
+-- start obligation transfer in the background
+os.execute(string.format("/usr/sbin/takepayment '%s' '%s' '%s' '%s' '%s' &",
+	acltype,
+	addr,
+	dt,
+	rand,
+	payment
+))
+if not ok then
+	os.execute("/usr/sbin/update-rules")
+end

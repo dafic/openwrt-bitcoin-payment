@@ -1,0 +1,215 @@
+html {
+  font-family: Helvetica, Verdana, sans-serif;
+  font-size: 0.8em;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+body {
+  text-align: center;
+  margin: 0px;
+  padding: 0px;
+}
+
+h1 {
+  color: #404040;
+  margin-top: 5px;
+}
+
+#langmenu {
+  float: right;
+  margin: 0 15px 0 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+#langmenu li {
+  display: inline;
+  padding: 0 0.4em;
+  border-left: 1px solid black;
+}
+
+#langmenu li.first {
+  border-left: none;
+}
+
+#header {
+  margin: 5px;
+  margin-right: auto;
+  margin-left: auto;
+  width: 65%;
+  min-width:350px;
+  padding: 10px;
+  padding-top: 0;
+  padding-bottom: 0;
+  text-align: right;
+  overflow: hidden;
+}
+
+#header h1 {
+  padding-top: 20px;
+  text-align: center;
+  color: #cc0000;
+  font-size: 1.8em;
+}
+
+#header img {
+  float: left;
+  padding: 0;
+}
+
+.content {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-right:auto;
+  margin-left:auto;
+  width: 65%;
+  min-width: 300px;
+  border: 1px solid #aaaaaa;
+  text-align: left;
+  overflow: hidden;
+  padding: 15px;
+  padding-top: 10px;
+}
+
+.content h1 {
+  font-size: 1.25em;
+  text-align: left;
+}
+
+.content p {
+  font-size: 1em;
+  color: #000000;
+  margin: 5px;
+  margin-left: 0;
+}
+
+
+.content p.small {
+  font-size: 0.8em;
+}
+
+.content a, #footer a {
+  color: #cc0000;
+  margin-left: 0;
+  text-decoration: none;
+}
+
+.content a:link:hover,
+.content a:visited:hover,
+.content a:link:active,
+.content a:visited:active,
+.content a:link:focus,
+.content a:visited:focus,
+#footer a:link:hover,
+#footer a:visited:hover,
+#footer a:link:active,
+#footer a:visited:active,
+#footer a:link:focus,
+#footer a:visited:focus {
+  text-decoration: underline;
+}
+
+.content textarea {
+  width: 100%;
+  border: 1px solid #cccccc;
+}
+
+#price-list {
+  margin: 0 auto;
+  margin-bottom: 10px;
+}
+
+#price-list table {
+  width: 80%;
+  min-width:180px;
+  margin: 0 auto;
+  border: 1px solid #cccccc;
+  border-collapse: collapse;
+}
+
+#price-list table td {
+  text-align: left;
+  padding: 2px;
+}
+
+#price-list table td.right {
+  text-align: right;
+  font-weight: bold;
+  width: 30%;
+}
+
+#price-list table tr.odd {
+  background: #dddddd;
+}
+
+#enter-payment {
+  text-align: center;
+  margin: 0 auto;
+  margin-bottom: 10px;
+}
+
+#rand-issuer {
+  padding-left: 0;
+  margin-bottom: 10px;
+}
+
+.content img {
+  float: right;
+}
+
+input {
+  border: 1px solid #cccccc;
+}
+
+.button {
+  background: #dddddd;
+  margin-top: 2px;
+  border: 1px solid #cccccc;
+}
+
+.half {
+  width: 50%;
+  float: left;
+  min-width: inherit;
+}
+
+.full {
+  width: 100%;
+  float: left;
+}
+
+#footer {
+  margin-right: auto;
+  margin-left: auto;
+  padding: 10px;
+  padding-top: 5px;
+  width: 65%;
+  border: none;
+}
+
+#footer ul {
+  display: inline;
+  text-align: center;
+  padding: 0;
+}
+
+#footer p {
+  font-size: 0.8em;
+  color: #404040;
+  margin: 0;
+}
+
+#footer ul li {
+  font-size: 0.8em;
+  display: inline;
+  list-style-type: none;
+  padding-left: 5px;
+  border-left: 1px solid #aaaaaa;
+}
+
+#footer ul li.first {
+  display: inline;
+  padding-left: 0;
+  border: none;
+}

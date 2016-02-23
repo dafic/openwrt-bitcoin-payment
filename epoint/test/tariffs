@@ -1,0 +1,5 @@
+# time(s)  amount(EPT)   ACL file (optional, spaces in path are NOT ALLOWED)
+2629728    7200          /etc/epoint.acl
+  86400     800
+   3600     200          /var/epoint.acl
+     60      10

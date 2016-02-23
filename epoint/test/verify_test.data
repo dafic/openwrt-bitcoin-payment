@@ -1,0 +1,62 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+Content-type: text/plain.epoint.certificate; charset=utf-8
+Document-template: https://www.epointsystem.org/issuer/template?ID=4B78EA23722649AF8C8A578BE3B08D6CB34680D7
+
+CERTIFICATE OF VALUE
+
+
+Value: 1 EPT
+
+ID: 8970 A9A8 CC69 675F 5825  1D78 3631 6055 80CA 88DB
+
+SN: 0000000000000042
+
+
+Issued by: FF55 B81E 2F9B 6E12 C65D  6153 BFB2 2A21 0DC8 3F58
+URL: https://www.epointsystem.org/issuer
+Email: issuer@epointsystem.org
+Date: 2008-08-11 17:06:31 UTC
+
+Licensed by: N/A
+
+Redemption:
+ The issuer identified by the OpenPGP public key
+ FF55 B81E 2F9B 6E12 C65D  6153 BFB2 2A21 0DC8 3F58
+ pursuant to the service contract as published at
+ https://www.epointsystem.org/issuer/service
+ (1) shall redeem the binary sequence with the message
+ digest 8970 A9A8 CC69 675F 5825  1D78 3631 6055 80CA 88DB (SHA1)
+ for newly issued certificates equal to 1 ePoints
+ or for goods and services worth 1 ePoints to
+ whoever reveals the sequence first and
+ (2) shall accept the binary sequence with the message
+ digest 8970 A9A8 CC69 675F 5825  1D78 3631 6055 80CA 88DB (SHA1)
+ as tender of existing debt equal to 1 ePoints
+ of the one who reveals the sequence first.
+
+Validity:
+ This certificate is valid only with a valid digital signature
+ of the issuer.
+
+Notes:
+- -----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+/emit?D=8970A9A8CC69675F58251D783631605580CA88DB&F=1&K=FF55B81E2F9B6E12C65D6153BFB22A210DC83F58&I=test
+- -----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (GNU/Linux)
+
+iEYEARECAAYFAkigdHQACgkQi+vAY9cJzcLHmgCeOPiIXUhnlf+6xcJaexnLmZ7l
+UcgAnixuE/DlP9eU7INv4JYB1p2xKVTA
+=otgV
+- -----END PGP SIGNATURE-----
+~
+-----BEGIN PGP SIGNATURE-----
+Version: BCPG v1.38
+
+iD8DBQFIoHGXv7IqIQ3IP1gRAuGdAJ4yhBBA68pJpapLvfwO4cqupDx0fACfa+ZG
+bc4heZmWpukLptGxDO+ONyA=
+=9RC7
+-----END PGP SIGNATURE-----

@@ -1,0 +1,48 @@
+<%-
+require("epoint.i18n")
+t = epoint.i18n.translate
+-%>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+    <head>
+        <title>ePoint</title>
+        <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="/epoint-static/epoint-splash.css">
+        <link rel="icon" type="image/x-icon" href="/epoint-static/epoint.ico">
+        <link rel="shortcut icon" type="image/x-icon" href="/epoint-static/epoint.ico">
+        <style type="text/css">
+        span.warning {
+            font-size: 130%;
+            color: red;
+        }
+        </style>
+    </head>
+    <body>
+        <div id="header">
+            <img src="/epoint-static/ephs.png" alt="ePoint HotSpot">
+        </div>
+        <div class="content">
+            <h1><%=t('Billing information')%></h1>
+            <form method="POST">
+                <label for="name"><%=t('Name')%></label><br>
+                <input type="text" name="name" id="name" value="<%= billing_name or '' %>">
+                <br>
+                <label for="address"><%=t('Address')%></label>
+                <textarea name="address" id="address"><%= billing_address or '' %></textarea>
+                <br>
+                <input type="submit" name="submit" value="<%=t('Save')%>" class="button">
+                <input type="submit" name="clear" value="<%=t('Clear')%>" class="button">
+            </form>
+            <% if cookies_disabled then %>
+            <p><span class="warning"><%=t('Error: cookies are disabled in your browser.')%></span></p>
+            <% else %>
+            <p><%=t('Important: cookies must be enabled for billing to work.')%></p>
+            <% end %>
+        </div>
+        <div id="footer">
+            <ul>
+                <li class="first"><a href="http://www.epointsystem.org/">ePoint Systems Ltd.</a></li>
+            </ul>
+        </div>
+    </body>
+</html>

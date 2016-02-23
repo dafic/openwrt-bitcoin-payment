@@ -1,0 +1,14 @@
+#!/bin/sh
+# Copyright (C) 2008 ePoint Systems Ltd
+
+# TODO: replace with epoint.acl or epoint.util
+
+ACLLOCK=/var/lock/epoint.acl
+
+acl_lock() {
+    lock $ACLLOCK
+}
+
+acl_unlock() {
+    lock -u $ACLLOCK
+}

@@ -1,0 +1,67 @@
+#!/usr/bin/lua
+-- Copyright (C) 2010 ePoint Systems Ltd.
+
+local http = require("luci.http.protocol")
+local protocol = require("epoint.protocol")
+require("uci")
+require("luci.template")
+require("epoint.i18n")
+
+-- using globals so template renderer gets them
+
+epoint.i18n.cgi_select_language()
+write = io.write
+luci.template.context.viewns = {}
+local target = uci.get("epoint.config.target")
+errormsg = ""
+self = os.getenv("REQUEST_URI") or "/cgi-bin/epoint/upload"
+
+local function upload()
+	local n = tonumber(os.getenv("CONTENT_LENGTH")) or 4096
+	local s = io.read(n)
+	local params = http.urldecode_params(s)
+	if not params then
+		errormsg = "Invalid form parameters"
+		return
+	end
+
+	total = tonumber(params["total"]) or 0
+	rand = params["rand"] or ""
+	rand = string.gsub(rand, "%s", "")
+	if not string.match(rand, "^[a-zA-Z0-9/+]+=*$") then
+		errormsg = "Invalid RAND"
+		return
+	end
+	local fpr = protocol.getfpr(rand)
+	if not fpr then
+		errormsg = "Invalid RAND"
+		return
+	end
+	local c = protocol.verify(fpr)
+	if not c then
+		errormsg = "Could not verify RAND (network error?)"
+		return
+	elseif c.value <= 0 then
+		errormsg = "Insufficient payment"
+		return
+	end
+	c = protocol.obligation_transfer(rand, target, c.value)
+	if not c or not c.DIFFERENCE then
+		errormsg = "Insufficient payment"
+		return
+	end
+	total = total + (tonumber(c.DIFFERENCE) or 0)
+	rand = ""
+end
+
+if os.getenv("REQUEST_METHOD") == "POST" then
+	upload()
+else
+	rand = ""
+	total = 0
+end
+
+io.write("Content-Type: text/html; charset=utf-8\r\n")
+epoint.i18n.cgi_set_language_cookie()
+io.write("\r\n")
+luci.template.render("epoint/client/upload")

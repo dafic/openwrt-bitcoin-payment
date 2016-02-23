@@ -1,0 +1,40 @@
+#!/usr/bin/lua
+-- Copyright (C) 2010 ePoint Systems Ltd.
+
+local value = tonumber(arg[1])
+
+if not value then
+    io.stderr:write(string.format("Usage:\n" ..
+        "%s <value> [<source currency> = EPT] [<destination currency>]\n", arg[0]))
+    os.exit(1)
+end
+
+local src_unit = arg[2] or "EPT"
+local dest_unit = arg[3]
+
+local rates = {}
+for line in io.lines("/etc/epoint/exchange-rate") do
+    if not line:match("^%s*#") then
+        local lhs, lunit, rhs, runit = line:match("(%d+)%s+(%a+)%s+=%s+(%d+)%s+(%a+)")
+        rates[lunit] = rates[lunit] or {}
+        rates[lunit][runit] = rhs / lhs
+        if lunit == "EPT" then
+            dest_unit = dest_unit or runit
+        elseif runit == "EPT" then
+            dest_unit = dest_unit or lunit
+        end
+    end
+end
+
+local result
+
+if rates[src_unit] and rates[src_unit][dest_unit] then
+    result = value * rates[src_unit][dest_unit]
+elseif rates[dest_unit] and rates[dest_unit][src_unit] then
+    result = value / rates[dest_unit][src_unit]
+else
+    io.stderr:write("Requested exchange rate is unknown.\n")
+    os.exit(1)
+end
+
+print(string.format("%.4f %s", result, dest_unit))

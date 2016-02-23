@@ -1,0 +1,27 @@
+#!/usr/bin/lua
+-- Copyright (C) 2010 ePoint Systems Ltd.
+
+local acl = require("epoint.acl")
+require("epoint.i18n")
+epoint.i18n.cgi_select_language()
+
+local addr = acl.getaddr(os.getenv("REMOTE_ADDR"))
+local ok, expire, rand = acl.hasaccess(addr)
+if ok and rand then
+	acl.update(function (entries)
+		entries[addr] = nil
+	end)
+	os.execute("update-rules")
+elseif ok and not expire then
+	-- TODO: should only be done for self whitelisted entries
+	os.execute(string.format("/usr/sbin/whitelist remove %s", addr))
+end
+
+io.write(
+	"Status: 303 See Other\r\n" ..
+	"Content-Type: text/html; charset=utf-8\r\n" ..
+	"Location: /cgi-bin/epoint/status\r\n")
+epoint.i18n.cgi_set_language_cookie()
+io.write(
+	"\r\n" ..
+	"<html><body><a href=\"/cgi-bin/epoint/status\">see other</a></body></html>\n")

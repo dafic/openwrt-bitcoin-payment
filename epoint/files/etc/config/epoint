@@ -1,0 +1,10 @@
+config 'epoint' 'config'
+    option 'issuer_pk'  '/etc/issuer.pk'
+    # MUST include protocol specification, MUST NOT include trailing slash
+    option 'issuer'     'http://cloud.epoint.org/issuer'
+    option 'issuerfpr'  '0DA939136E2457FBE0C6D0052AA2FE204869CA92'
+    # obligation transfer target (default to dtest)
+    option 'target'     'CD74A94102D0B73F7C2CADA26DD8D8275C9BAC2B'
+    # price per minute
+    option 'tariff'     '20'
+    option 'extraacls'  '/etc/epoint-local.acl'

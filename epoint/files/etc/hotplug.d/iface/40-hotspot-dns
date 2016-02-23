@@ -1,0 +1,35 @@
+#!/bin/sh
+# Copyright (C) 2009 ePoint Systems Ltd.
+
+. /etc/functions.sh
+
+change_ip() {
+    config_get name "$1" name
+    config_get ip "$1" ip
+
+    if [ "$name" = "hotspot.ept" ]; then
+        found=yes
+        if [ "$ip" != "$router_ip" ]; then
+            uci set dhcp.$1.ip=$router_ip
+            changed=yes
+        fi
+    fi
+}
+
+if [ "$ACTION" = "ifup" ]; then
+    include /lib/network
+    scan_interfaces
+    router_ip=`config_get lan ipaddr`
+    config_load dhcp
+    config_foreach change_ip domain
+    if [ -z "$found" ]; then
+        cfg=`uci add dhcp domain`
+        uci set dhcp.$cfg.name=hotspot.ept
+        uci set dhcp.$cfg.ip=$router_ip
+        changed=yes
+    fi
+    uci commit dhcp
+    if [ -n "$changed" ]; then
+        /etc/init.d/dnsmasq restart
+    fi
+fi

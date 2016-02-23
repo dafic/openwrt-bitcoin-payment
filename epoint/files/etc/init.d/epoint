@@ -1,0 +1,65 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 ePoint Systems Ltd
+
+START=50
+
+include /lib/network
+scan_interfaces
+LAN=`config_get lan ifname`
+
+. /usr/lib/epoint/lock
+
+RUN_FLAG=/var/run/epoint
+
+clear_rules() {
+    while iptables -t nat -D PREROUTING -j MACREDIRECT; do : ; done
+    while iptables -t filter -D FORWARD -i $LAN -j MACFILTER; do : ; done
+}
+
+start() {
+    if [ -f /etc/epoint_firstboot ]; then
+        uci set wireless.@wifi-iface[0].ssid=ePoint
+        uci commit
+        
+        rm -f /etc/epoint_firstboot
+    fi
+    
+    [ -f /etc/epoint/secret ] || dd if=/dev/urandom of=/etc/epoint/secret bs=1 count=32
+    touch /etc/epoint/rand.db
+    
+    if ! grep -q 'epoint' /etc/firewall.user > /dev/null; then
+        echo '[ -f /var/run/epoint ] && /etc/init.d/epoint start' >> /etc/firewall.user
+    fi
+    
+    iptables -t nat -N MACREDIRECT
+    iptables -t filter -N MACFILTER
+    
+    clear_rules
+    
+    iptables -t nat -A PREROUTING -j MACREDIRECT
+    iptables -t filter -I FORWARD -i $LAN -j MACFILTER
+    
+    touch $ACLLOCK
+    touch $RUN_FLAG
+    
+    {
+        crontab -l
+        (crontab -l | grep -q expire-rules) || echo '* * * * * /usr/sbin/expire-rules'
+    } | crontab -
+    
+    /usr/sbin/update-rules
+}
+
+stop() {
+    clear_rules
+    
+    crontab -l | grep -v expire-rules | crontab -
+    
+    rm -f $ACLLOCK
+    rm -f $RUN_FLAG
+    
+    iptables -t nat -F MACREDIRECT
+    iptables -t nat -X MACREDIRECT
+    iptables -t filter -F MACFILTER
+    iptables -t filter -X MACFILTER
+}

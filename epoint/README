@@ -1,0 +1,48 @@
+Building package
+========================================================================
+You need OpenWRT source tree in order to build this package.
+
+    svn co https://svn.openwrt.org/openwrt/trunk/ openwrt
+    cd openwrt
+
+Add ePoint repository to the list of OpenWRT package feeds and update them.
+
+    echo "src-svn epoint \
+        https://www.epointsystem.org/svn/vending_machine/hotspot/trunk" >> \
+        feeds.conf.default
+    ./scripts/feeds update
+    ./scripts/feeds install epoint # this will install dependencies as well
+
+Make sure you have choosen the right target (Broadcom BCM947xx/953xx [2.4]), 
+and select epoint under Network category.
+
+    make menuconfig
+
+Finally, build OpenWRT.
+
+    make
+
+Binary .ipk packages will appear under ./bin/packages/mipsel.
+Once you have the whole system built, you can recompile specific package 
+much faster:
+
+    TOPDIR=`pwd` make -C package/feeds/epoint/epoint
+
+
+Installation
+========================================================================
+From respository:
+
+Add http://www.epointsystem.org/openwrt/packages/ as a package source and 
+install epoint package.
+You can do this from the web interface or from SSH command line interface.
+
+    echo src epoint http://www.epointsystem.org/openwrt/packages/ >> \
+        /etc/ipkg.conf
+    ipkg update
+    ipkg install epoint
+
+Note: after installing package internet access from computers connected 
+to the router will be immediately cut off. Try to visit any web page to 
+get access for specified amount of time. If you want to simply disable 
+access filter run "/etc/init.d/epoint stop".

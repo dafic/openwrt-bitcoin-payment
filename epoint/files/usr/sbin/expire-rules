@@ -1,0 +1,80 @@
+#!/usr/bin/lua
+
+-- topup expired entries by dt time and transfer amount value from their account
+
+local acl = require("epoint.acl")
+local localacl = require('epoint.localacl')
+local protocol = require('epoint.protocol')
+require('uci')
+
+local target = uci.get('epoint.config.target')
+local tariff = tonumber(uci.get('epoint.config.tariff'))
+local t = os.time()
+local mactab = acl.arptable()
+local lan = uci.get('network.lan.ifname') or 'eth0'
+
+function needsupdate(t)
+	local entries = acl.read()
+	for k,v in pairs(entries) do
+		if v.expire <= t then
+			return true
+		end
+	end
+	return false
+end
+
+function connected(addr)
+	if mactab[addr] then
+		-- arping the ip
+		return os.execute(string.format('arping -q -f -c3 -I%s %s',
+			lan, mactab[addr])) == 0
+	end
+	-- use the routing table to determine if a vpn ip is connected
+	return os.execute(string.format("route -n |grep -q '^%s .* ppp[0-9]\+$'",
+		addr:gsub("[.]", "\\.")))
+end
+
+function topup(rand, amount)
+	local c = protocol.obligation_transfer(rand, target, amount)
+	if c and c.VALUE then
+		return true
+	end
+	-- try to remove all remaining value
+	local fpr = protocol.getfpr(rand)
+	c = protocol.verify(fpr)
+	if c and c.value > 0 then
+		if c.value > amount then
+			-- should not happen
+			c.value = amount
+		end
+		protocol.obligation_transfer(rand, target, c.value)
+	end
+	return false
+end
+
+if localacl.refresh() or needsupdate(t) then
+	local extra = acl.extraentries()
+	acl.update(function(entries)
+		for k,v in pairs(entries) do
+			-- remove whitelisted entries from the acl
+			-- TODO: race?
+			if extra[v.addr] then
+				entries[k] = nil
+			elseif v.expire <= t then
+				local da = 0
+				local dt = 0
+				while v.expire + dt <= t do
+					dt = dt + 60
+					da = da + tariff
+				end
+				if v.rand and connected(v.addr) and topup(v.rand, da) then
+					v.expire = v.expire + dt
+				else
+					entries[k] = nil
+				end
+			end
+		end
+	end)
+	-- extra acls do their own update-rules
+	os.execute("/usr/sbin/update-rules")
+end

@@ -1,0 +1,73 @@
+div.ept {
+  position: relative;
+  width: 50mm;
+  height: 81.6mm;
+  border: 1px solid gray;
+  padding: 2mm;
+  background: lightgray;
+  float: left;
+}
+
+div.content div.ept {
+  left: 50%;
+  margin-left: -27mm;
+}
+
+div.ept .logo {
+  position: relative;
+  float: left;
+  margin-right: 2mm;
+}
+
+div.ept p {
+  margin: 1mm;
+}
+
+div.ept .info {
+  font-size: 10pt;
+  text-align: left;
+}
+
+div.ept .value {
+  font-size: 18pt;
+}
+
+div.ept .time {
+  font-size: 12pt;
+}
+
+div.ept img.qrcode {
+  width: 53mm;
+  height: 53mm;
+}
+
+div.ept div.barcode {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: white;
+  font-family: "monospace";
+  font-size: 12pt;
+  text-align: center;
+  border-width: 0;
+  letter-spacing: 1mm;
+  line-height: 1.5;
+  padding-top: 0;
+  padding-bottom: 1mm;
+}
+
+.scissors {
+  font-size: 200%;
+}
+
+@media print {
+    .no-printing {
+        display: none;
+        color: #FFFFFF;
+    }
+
+    .page-break {
+        page-break-after: always;
+    }
+}

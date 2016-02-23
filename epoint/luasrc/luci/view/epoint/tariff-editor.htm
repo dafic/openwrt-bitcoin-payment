@@ -1,0 +1,21 @@
+<%+header%>
+<form method="post" action="<%=REQUEST_URI%>" enctype="multipart/form-data" id="editor-form">
+  <div class="cbi-map">
+    <h2><a id="content" name="content">Tariff editor</a></h2>
+    <fieldset class="cbi-section">
+      <div class="cbi-section-node">
+        <div class="cbi-value">
+          <textarea class="cbi-input-textarea" style="width: 100%;" rows="20" name="content">
+            <%-=luci.util.pcdata(content)-%>
+          </textarea>
+        </div>
+      </div>
+      <br/>
+    </fieldset>
+    <br/>
+  </div>
+  <div>
+    <input type="submit" class="cbi-button-save" value="Submit"/>
+  </div>
+</form>
+<%+footer%>

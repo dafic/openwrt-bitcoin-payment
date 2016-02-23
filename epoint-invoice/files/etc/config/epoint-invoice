@@ -1,0 +1,6 @@
+config 'epoint-invoice'  'config'
+	option 'vat'     '0.25'
+	option 'seller'  'provider name, address'
+	option 'method'  'készpénz'
+	option 'service' 'vezetéknélküli internethozzáférés'
+	option 'userpass' 'admin:admin'

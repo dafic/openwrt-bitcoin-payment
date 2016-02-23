@@ -1,0 +1,30 @@
+--- a/src/verify.c	2007-05-12 15:26:11.000000000 +0200
++++ b/src/verify.c	2011-01-17 16:13:51.000000000 +0100
+@@ -238,17 +238,18 @@
+ 	break;
+       if (!strncmp (buf, s, strlen (s)))
+ 	break;
+-      else 
+-	{
+-	  cdk_stream_peek (inp, (byte*)chk, DIM (chk)-1);
+-	  i = strncmp (chk, s, strlen (s));
+-	  if (strlen (buf) == 0 && i == 0)
+-	    continue; /* skip last '\n' */
+-	  _cdk_trim_string (buf, i == 0? 0 : 1);
+-	  gcry_md_write (md, buf, strlen (buf));
+-        }
++
++      cdk_stream_peek (inp, (byte*)chk, DIM (chk)-1);
++      i = strncmp (chk, s, strlen (s));
++      if (strlen (buf) == 0 && i == 0)
++        continue; /* skip last '\n' */
++
+       if (!strncmp (buf, "- ", 2)) /* FIXME: handle it recursive. */
+ 	memmove (buf, buf + 2, nbytes - 2);
++
++      _cdk_trim_string (buf, i==0? 0:1);
++      gcry_md_write (md, buf, strlen (buf));
++
+       if (out) 
+ 	{
+ 	  if (strstr (buf, "\r\n"))

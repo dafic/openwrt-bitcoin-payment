@@ -1,0 +1,57 @@
+#!/bin/sh
+# Copyright (C) 2008 ePoint Systems Ltd
+
+. /lib/functions.sh
+include /lib/network
+scan_interfaces
+MASK="`config_get lan ipaddr`/`config_get lan netmask`"
+
+. /usr/lib/epoint/lock
+
+ACLS="/var/epoint.acl $(uci get epoint.config.extraacls |tr ',' ' ')"
+HOSTS=/etc/epoint.issuers
+
+# TODO: trap signals and run acl_unlock
+acl_lock
+
+[ -e $HOSTS ] || touch $HOSTS
+for ACL in $ACLS; do
+    [ -e $ACL ] || touch $ACL
+done
+
+MACREG='^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$'
+# ipv4 only, ipv6 conflicts with mac
+IPREG='^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+
+{
+    echo "*filter"
+    echo ":MACFILTER -"
+    for ACL in $ACLS; do
+        awk -v mac="$MACREG" -v ip="$IPREG" '
+            $1 ~ mac { print "-A MACFILTER -m mac --mac-source " $1 " -j RETURN" }
+            $1 ~ ip  { print "-A MACFILTER -s " $1 " -j RETURN" }
+        ' $ACL
+    done
+    awk '!/^[[:space:]]*#/ && NF > 0 { print "-A MACFILTER -d " $1 " -j RETURN" }' $HOSTS
+    echo "-A MACFILTER -p tcp -m state --state RELATED,ESTABLISHED -j REJECT --reject-with tcp-reset"
+    echo "-A MACFILTER -j REJECT --reject-with icmp-admin-prohibited"
+    echo "COMMIT"
+} | /usr/sbin/iptables-restore --noflush
+
+{
+    echo "*nat"
+    echo ":MACREDIRECT -"
+    # don't redirect vpn
+    echo "-A MACREDIRECT -d 192.168.0.0/24 -j RETURN"
+    for ACL in $ACLS; do
+        awk -v mac="$MACREG" -v ip="$IPREG" '
+            $1 ~ mac { print "-A MACREDIRECT -m mac --mac-source " $1 " -j RETURN" }
+            $1 ~ ip  { print "-A MACREDIRECT -s " $1 " -j RETURN" }
+        ' $ACL
+    done
+    awk '!/^[[:space:]]*#/ && NF > 0 { print "-A MACREDIRECT -p tcp -d " $1 " -j RETURN" }' $HOSTS
+    echo "-A MACREDIRECT -p tcp -s $MASK ! -d $MASK --dport 80 -j REDIRECT --to-ports 8080"
+    echo "COMMIT"
+} | /usr/sbin/iptables-restore --noflush
+
+acl_unlock

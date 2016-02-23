@@ -1,0 +1,11 @@
+service epoint
+{
+    disable     = no
+    protocol    = tcp
+    port        = 8080
+    socket_type = stream
+    wait        = no
+    server      = /usr/lib/epoint/http-redirect.awk
+    user        = root
+    group       = root
+}

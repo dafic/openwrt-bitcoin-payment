@@ -1,0 +1,8 @@
+1) You need two secret keys without password protection in your gpg keyring. 
+   Their identifiers must be defined in crypto.py (DEFAULT_ISSUER and 
+   ALTERNATE_ISSUER). DEFAULT_ISSUER must match the public key installed on 
+   router.
+2) Copy scripts from cgi/ directory to /www/cgi-bin/ directory on router.
+3) There must be `tariffs' file in current directory matchin `/etc/tariffs/' 
+   on router. (TODO: retrieve it automatically via HTTP).
+4) Run ./test.py.

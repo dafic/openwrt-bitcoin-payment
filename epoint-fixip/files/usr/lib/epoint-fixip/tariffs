@@ -1,0 +1,40 @@
+#!/bin/sh
+# Copyright (C) 2008 ePoint Systems Ltd
+
+parse_tariffs() {
+    awk -v payment=$1 '
+    BEGIN {
+        acl = "/etc/epoint-fixip.acl"
+        found = 0
+    }
+    
+    !/^[[:space:]]*#/ {
+        if ($3) {
+            acl = $3
+        }
+        if (payment) {
+            if (payment >= $2) {
+                printf "%.0f\t%s\t%s\n", payment * $1 / $2, acl
+                found = 1
+                exit
+            }
+        } else {
+            print acl
+        }
+    }
+    
+    END {
+        if (payment && !found) {
+            print "0"
+            exit
+        }
+    }' /etc/tariffs-fixip
+}
+
+acl_files() {
+    parse_tariffs | sort | uniq
+}
+
+select_tariff() {
+    parse_tariffs $1
+}

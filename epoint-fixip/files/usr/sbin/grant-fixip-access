@@ -1,0 +1,33 @@
+#!/usr/bin/lua
+
+local tariff = require("epoint.fixip.tariff")
+local acl = require("epoint.fixip.acl")
+local db = require("epoint.randdb")
+
+local now = os.time()
+local addr = arg[1]
+local payment = tonumber(arg[2])
+local rand = arg[3]
+
+if not payment or not rand then
+	io.stderr:write("usage: grant-fixip-access addr payment rand\n")
+	os.exit(1)
+end
+local dt, aclfile = tariff.choose(payment)
+
+if dt < 1 then
+	io.stderr:write("payment below minimum\n")
+	os.exit(2)
+end
+
+-- update acl
+if not acl.topup(addr, now, dt, aclfile) then
+	io.stderr:write("already whitelisted\n")
+	os.exit(3)
+end
+
+if not db.add_rand{rand = rand, value = payment} then
+	os.exit(1)
+end
+
+os.execute("/usr/sbin/update-fixip-rules")

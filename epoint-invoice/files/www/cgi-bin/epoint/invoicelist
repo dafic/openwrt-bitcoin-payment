@@ -1,0 +1,183 @@
+#!/usr/bin/lua
+local protocol = require("luci.http.protocol")
+local invoice = require("epoint.invoice")
+local util = require("epoint.util")
+local mod = require("epoint.invoice.hu")
+
+local invcgi="/cgi-bin/epoint/invoice"
+local lscgi="/cgi-bin/epoint/invoicelist"
+
+-- TODO: i18n
+local header = [[
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+<title>Számla lista</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+</head>
+<body>
+]]
+
+local footer = [[
+</body>
+</html>
+]]
+
+
+-- TODO: is this avail in luci?
+local function htmlesc(s)
+	r = s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+	return r
+end
+
+local function replace(s, vars)
+	for k,v in pairs(vars) do
+		s = s:gsub("{"..k.."}", htmlesc(tostring(v)))
+	end
+	return s
+end
+
+local function linksn(sn, n)
+	return string.format('<a href="%s?sn=%d&amp;n=%d">%d</a>', lscgi, sn, n, sn)
+end
+
+local function linktime(time, n, s)
+	return string.format('<a href="%s?t=%d&amp;n=%d">%s</a>', lscgi, time, n, s)
+end
+
+local function navsn(sn, n, firstsn, lastsn)
+	local start, stop, next_, prev
+	if sn > firstsn then
+		start = linksn(firstsn, n)
+		if sn >= firstsn + n then
+			prev = linksn(sn - n, n)
+		else
+			prev = ""
+		end
+	else
+		start = ""
+		prev = ""
+	end
+
+	if sn + n < lastsn then
+		stop = linksn(lastsn - n + 1, n)
+		next_ = linksn(sn + n, n)
+	else
+		stop = ""
+		next_ = ""
+	end
+	return string.format("<table><tr><td>%s<td>..<td>%s<td>%s<td>%s<td>..<td>%s</table>", start, prev, tostring(sn), next_, stop)
+end
+
+-- TODO: sn order != time order
+local function navtime(t, n, firstt, lastt)
+	local start, stop, next_, prev
+	day = 86400
+	dt1 = t - firstt
+	dt2 = lastt - t
+
+	prev = ""
+	if t-day > firstt then
+		prev = "<td>" .. linktime(t-day, n, "-day")
+		if t-day*7 > firstt then
+			prev = "<td>" .. linktime(t-day*7, n, "-week") .. prev
+			if t-day*30 > firstt then
+				prev = "<td>" .. linktime(t-day*30, n, "-month") .. prev
+			end
+		end
+	end
+	next_ = ""
+	if t+day < lastt then
+		next_ = "<td>" .. linktime(t+day, n, "+day")
+		if t+day*7 < lastt then
+			next_ = next_ .. "<td>" .. linktime(t+day*7, n, "+week")
+			if t+day*30 < lastt then
+				next_ = next_ .. "<td>" .. linktime(t+day*30, n, "+month")
+			end
+		end
+	end
+	return string.format("<table><tr>%s<td>%s%s</table>", prev, os.date("%Y-%m-%d", t), next_)
+end
+
+local row = [[
+<tr><td><a href="{cgi}?sn={sn}">{sn}</a><td><a href="{cgi}?sn={sn}">{date}</a><td>{name}<td>{address}<td>{payment}<td>{currency}
+]]
+
+-- TODO: render nav even if out of range
+local function renderlist(sn, n, first, last)
+	local r = invoice.getsnrange(sn, n) or {}
+	local nav = ""
+	if #r > 0 then
+		nav = navsn(sn, n, first.sn, last.sn) .. navtime(r[1].timestamp, n, first.timestamp, last.timestamp)
+	end
+	io.write(header)
+	io.write(nav)
+	io.write([[<table border=1 width=100%>
+<tr><th>Sorszám<th>Dátum<th>Vevő neve<th>Vevő címe<th>ePoint<th>Összeg
+]])
+	for k,v in pairs(r) do
+		v.cgi = invcgi
+		v.date =  os.date("%Y-%m-%d %H:%M", v.timestamp)
+		io.write(replace(row, v))
+	end
+	io.write("</table>\n")
+	io.write(nav)
+	io.write(footer)
+end
+
+local function authok()
+	require("uci")
+	auth = os.getenv('HTTP_AUTHORIZATION')
+	if auth and auth:match("^Basic ") then
+		up = util.b64decode(auth:sub(7))
+		if up == uci.get("epoint-invoice.config.userpass") then
+			return true
+		end
+	end
+	return false
+end
+
+if not authok() then
+	io.write(
+	"Status: 401 Authorization Required\r\n" ..
+	"Content-Type: text/plain; charset=UTF-8\r\n" ..
+	"WWW-Authenticate: Basic realm=\"invoice auth\"\r\n" ..
+	"\r\n")
+	os.exit(1)
+end
+
+qs = os.getenv("QUERY_STRING") or ""
+params = protocol.urldecode_params(qs)
+first = invoice.getfirst()
+if first then
+	firstsn = first.sn
+else
+	firstsn = 0
+end
+last = invoice.getlast()
+if last then
+	lastsn = last.sn
+else
+	lastsn = 0
+end
+sn = tonumber(params.sn)
+n = tonumber(params.n)
+time = tonumber(params.t)
+if time then
+	sn = invoice.gettimesn(time)
+end
+if not n then
+	n = 20
+end
+if not sn then
+	sn = lastsn - n + 1
+	if sn < firstsn then
+		sn = firstsn
+	end
+end
+
+io.write(
+	"Status: 200 OK\r\n" ..
+	"Content-Type: text/html; charset=UTF-8\r\n" ..
+	"\r\n")
+renderlist(sn, n, first, last)

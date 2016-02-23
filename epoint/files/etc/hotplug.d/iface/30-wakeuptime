@@ -1,0 +1,16 @@
+#!/bin/sh
+# Copyright (C) 2009 ePoint Systems Ltd.
+
+. /etc/functions.sh
+
+WAKEUP=/var/state/lasttime
+NTPC=`which ntpclient`
+NTP_RUNNING=`ps | grep "$NTPC" | grep -v grep`
+
+if [ "$ACTION" = "ifup" ]; then
+    if [ ! -f "$WAKEUP" ]; then
+        if [ -n "$NTP_RUNNING" ]; then
+            date +%s > "$WAKEUP"
+        fi
+    fi
+fi

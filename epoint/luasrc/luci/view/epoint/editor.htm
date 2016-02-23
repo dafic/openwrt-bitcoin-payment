@@ -1,0 +1,76 @@
+<%#
+  LuCI configuration interface for ePoint
+  
+  Copyright (C) 2009 ePoint Systems Ltd
+  Author: Rooslan S. Khayrov
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-%>
+<%+header%>
+<script type="text/javascript">
+function change_file() {
+  document.getElementById("file-selected").value = "1";
+  document.getElementById("editor-form").submit();
+}
+</script>
+<form method="post" action="<%=REQUEST_URI%>" enctype="multipart/form-data" id="editor-form">
+  <div class="cbi-map">
+    <h2><a id="content" name="content">Template editor</a></h2>
+    <fieldset class="cbi-section">
+      <div class="cbi-section-node">
+        <div class="cbi-value">
+          <label class="cbi-value-title" for="filelist">Select template file</label>
+          <div class="cbi-value-field">
+            <input type="hidden" id="file-selected" name="file-selected" />
+            <select class="cbi-input-select" id="filelist" name="file"
+              value="<%=selected_file%>" onchange="change_file();">
+            <% for file, display_name in pairs(files) do %>
+              <option value="<%=file%>"
+                <% if file == selected_file then %>
+                selected="selected"
+                <% end %>
+              ><%=display_name%></option>
+            <% end %>
+            </select>
+          </div>
+        </div>
+        <div class="cbi-value">
+          <textarea class="cbi-input-textarea" style="width: 100%;" rows="20" name="content">
+            <%-=luci.util.pcdata(content)-%>
+          </textarea>
+        </div>
+      </div>
+      <br/>
+      <p><a href="<%=REQUEST_URI%>?export=1">Export branding package</a></p>
+      <div class="cbi-value">
+        <label for="branding" class="cbi-value-title">Upload branding package:</label>
+        <div class="cbi-value-field">
+          <input type="file" id="branding" name="branding" accept="application/x-targz" class="cbi-input-file" />
+        </div>
+      </div>
+      <div class="cbi-value">
+        <label for="logo-file" class="cbi-value-title">Upload
+            <a href="/epoint-static/mylogo.jpg">logo</a> (JPEG file required):</label>
+        <div class="cbi-value-field">
+          <input type="file" id="logo-file" name="logo" accept="image/jpeg" class="cbi-input-file" />
+        </div>
+      </div>
+    </fieldset>
+    <br/>
+  </div>
+  <div>
+    <input type="submit" class="cbi-button-save" value="Submit"/>
+  </div>
+</form>
+<%+footer%>

@@ -1,0 +1,70 @@
+#!/usr/bin/lua
+
+local acl = require("epoint.acl")
+local protocol = require('epoint.protocol')
+require('uci')
+
+local now = os.time()
+local addr = arg[1]
+local rand = arg[2]
+
+local function errusage()
+	io.stderr:write("usage: grant-access addr rand\n")
+	os.exit(1)
+end
+local function errnetwork()
+	io.stderr:write("network error\n")
+	os.exit(2)
+end
+local function errinvalid()
+	io.stderr:write("invalid rand\n")
+	os.exit(3)
+end
+
+if not rand then
+	errusage()
+end
+local amount = tonumber(uci.get('epoint.config.tariff'))
+local dt = 60 * 60 * 24
+local target = uci.get('epoint.config.target')
+addr = acl.getaddr(addr)
+
+local ok, expire, oldrand = acl.hasaccess(addr)
+-- TODO: expiring extra acl may want perminute topup
+if ok and not oldrand then
+	io.stderr:write("whitelisted\n")
+	os.exit(0)
+end
+if oldrand == rand then
+	io.stderr:write("same rand\n")
+	os.exit(0)
+end
+local fpr = protocol.getfpr(rand)
+if not fpr then
+	errinvalid()
+end
+local c = protocol.verify(fpr)
+if not c then
+	errnetwork()
+end
+-- TODO: rand == target should mean inf value
+local value = tonumber(c.VALUE)
+if not value or value < amount then
+	errinvalid()
+end
+if not acl.topup(addr, now, dt, rand) then
+	-- TODO: filesystem error
+	errnetwork()
+end
+-- start obligation transfer in the background
+os.execute(string.format("/usr/sbin/takepayment acl '%s' '%s' '%s' '%s' '%s' &",
+	addr,
+	dt,
+	rand,
+	amount,
+	oldrand or ''
+))
+
+if not ok then
+	os.execute("/usr/sbin/update-rules")
+end
