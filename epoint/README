@@ -2,19 +2,19 @@ Building package
 ========================================================================
 You need OpenWRT source tree in order to build this package.
 
-    svn co https://svn.openwrt.org/openwrt/trunk/ openwrt
+    git clone git://git.openwrt.org/15.05/openwrt.git
     cd openwrt
 
 Add ePoint repository to the list of OpenWRT package feeds and update them.
 
-    echo "src-svn epoint \
-        https://www.epointsystem.org/svn/vending_machine/hotspot/trunk" >> \
+    echo "src-git epoint \
+        https://github.com/xoriole/openwrt-bitcoin-payment.git" >> \
         feeds.conf.default
     ./scripts/feeds update
     ./scripts/feeds install epoint # this will install dependencies as well
 
-Make sure you have choosen the right target (Broadcom BCM947xx/953xx [2.4]), 
-and select epoint under Network category.
+Make sure you have choosen the right target, and select epoint under 
+Network category.
 
     make menuconfig
 
@@ -31,7 +31,7 @@ much faster:
 
 Installation
 ========================================================================
-From respository:
+From respository (TEMPORARILY DOWN):
 
 Add http://www.epointsystem.org/openwrt/packages/ as a package source and 
 install epoint package.
