@@ -1,0 +1,153 @@
+<%#
+  LuCI configuration interface for ePoint
+  
+  Copyright (C) 2009 ePoint Systems Ltd
+  Author: Rooslan S. Khayrov
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-%>
+<%-
+require("uci")
+require("epoint.i18n")
+
+function switch_title()
+    if is_running then
+        return "Stop service"
+    else
+        return "Start service"
+    end
+end
+
+function switch_class()
+    if is_running then
+        return "cbi-button-reset"
+    else
+        return "cbi-button-apply"
+    end
+end
+
+function error_class(is_invalid)
+    if is_invalid then
+        return "cbi-value-error"
+    else
+        return ""
+    end
+end
+-%>
+<%+header%>
+<form method="post" action="<%=REQUEST_URI%>">
+    <div class="cbi-map">
+        <h2><a id="content" name="content">ePoint</a></h2>
+        <fieldset class="cbi-section">
+            <legend>Management</legend>
+            <div class="cbi-value">
+                <input type="submit" name="switch" class="cbi-button <%=switch_class()%>"
+                    value="<%=switch_title()%>" />
+            </div>
+            <div class="cbi-value">
+            <% if target then %>
+                Beneficiary key fingerprint:
+                    <span style="font-family: monospace;"><%=target%></span>
+                    <input type="submit" name="reset" value="Reset"
+                        class="cbi-button cbi-button-reset" />
+            <% else %>
+                Beneficiary is not set
+            <% end %>
+            </div>
+            <div class="cbi-value">
+                <label for="targetrand">Set benificiary (multiuse RAND):</label>
+                <span class="<%=error_class(invalid_targetrand)%>">
+                    <input type="text" name="targetrand" id="targetrand" value="<%=new_targetrand%>"
+                        class="cbi-input-text" />
+                </span>
+                <input type="submit" name="submit-rand" value="Submit"
+                    class="cbi-button cbi-button-apply" />
+            </div>
+            <div class="cbi-value">
+                <label for="target">Set benificiary (key fingerprint):</label>
+                <span class="<%=error_class(invalid_target)%>">
+                    <input type="text" name="target" id="target" value="<%=new_target%>"
+                        class="cbi-input-text" />
+                </span>
+                <input type="submit" name="submit" value="Submit"
+                    class="cbi-button cbi-button-apply" />
+            </div>
+            <div class="cbi-value">
+            <% if tariff then %>
+                Tariff:
+                    <span style="font-family: monospace;"><%=tariff%></span> EPT/min.
+            <% else %>
+                Tariff is not set.
+            <% end %>
+            </div>
+            <div class="cbi-value">
+                <label for="tariff">Set tariff (per-minute rate):</label>
+                <span class="<%=error_class(invalid_tariff)%>">
+                    <input type="text" name="tariff" id="tariff" value="<%=new_tariff%>"
+                        class="cbi-input-text" />
+                </span>
+                <input type="submit" name="submit-tariff" value="Submit"
+                    class="cbi-button cbi-button-apply" />
+            </div>
+        </fieldset>
+        <fieldset class="cbi-section">
+            <legend>Customer-facing interface</legend>
+            <div class="cbi-value">
+                <div class="cbi-value-title">
+                    <label for="iface-language">Default language:</label>
+                </div>
+                <div class="cbi-value-field">
+                    <%-
+                    local interface_lang = uci.get("epoint.config.interface_lang")
+                    -%>
+                    <select id="iface-langauge" class="cbi-input-select" name="iface-language">
+                        <option value="0"
+                            <%- if not interface_lang then %> selected="selected" <% end -%>
+                        >-- Please choose --</option>
+                    <%- for i, lang in ipairs(epoint.i18n.lang_available()) do
+                        require("epoint.i18n." .. lang)
+                        local display = epoint.i18n[lang].selfname
+                        local selected_attr = ""
+                        if lang == interface_lang then
+                            selected_attr = "selected=\"selected\""
+                        end
+                    -%>
+                        <option value="<%= lang %>" <%= selected_attr %> ><%= display %></option>
+                    <% end %>
+                    </select>
+                </div>
+                <input type="submit" name="submit-lang" value="Submit"
+                    class="cbi-button cbi-button-apply" />
+            </div>
+        </fieldset>
+        <fieldset class="cbi-section">
+            <legend>Statistics</legend>
+                <table class="cbi-section-table">
+                    <tr class="cbi-section-table-row">
+                        <td class="cbi-section-table-cell">Total ePoints collected:</td>
+                    <% if target_verified then %>
+                    <% if total >= 0 then %>
+                        <td class="cbi-section-table-cell"><%=total%> EPT</td>
+                    <% else %>
+                        <td class="cbi-section-table-cell">Beneficiary key fingerprint is invalid.</td>
+                    <% end %>
+                    <% else %>
+                        <td class="cbi-section-table-cell">Could not verify beneficiary key fingerprint (network error?).</td>
+                    <% end %>
+                    </tr>
+                </table>
+        </fieldset>
+    </div>
+</form>
+<%+footer%>

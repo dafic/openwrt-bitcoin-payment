@@ -1,0 +1,84 @@
+#!/usr/bin/lua
+local util = require("epoint.util")
+local acl = require("epoint.acl")
+local http = require("luci.http.protocol")
+local protocol = require("epoint.protocol")
+require("epoint.i18n")
+epoint.i18n.cgi_select_language()
+
+local function err(msg, details)
+	require("luci.template")
+	write = io.write
+	luci.template.context.viewns = {}
+	io.write(
+		"Status: 403 Forbidden\r\n"..
+		"Content-Type: text/html; charset=utf-8\r\n")
+	epoint.i18n.cgi_set_language_cookie()
+	io.write("\r\n")
+	ERROR = msg
+	ERROR_DETAILS = details
+	QUERY = QUERY or ""
+	luci.template.render("epoint/client/error")
+	os.exit(1)
+end
+
+local function userauth()
+	require("uci")
+	local auth = os.getenv('HTTP_AUTHORIZATION')
+	if auth and auth:match("^Basic ") then
+		local t = {}
+		uci.foreach("epoint", "user", function(s)
+			if s.login then
+				t[string.format('%s:%s', s.login, s.password)] = s.login
+			end
+		end)
+		return t[util.b64decode(auth:sub(7))]
+	end
+end
+
+-- TODO: pass redirect url in cookie?
+local user = userauth()
+if not user then
+	io.write(
+	"Status: 401 Authorization Required\r\n" ..
+	"Content-Type: text/plain; charset=UTF-8\r\n" ..
+	"WWW-Authenticate: Basic realm=\"login auth\"\r\n")
+	epoint.i18n.cgi_set_language_cookie()
+	io.write("\r\n")
+	os.exit(1)
+end
+
+local addr = acl.getaddr(os.getenv("REMOTE_ADDR"))
+
+local hostname = ""
+for line in io.lines("/var/dhcp.leases") do
+	local mac, ip, name = string.match(line, "%d+%s+([%x:.]+)%s+([%x:.]+)%s+([^%s]+)")
+	if mac:lower() == addr then
+		hostname = name
+	end
+end
+
+-- TODO: local ok, expire, r = acl.hasaccess(addr)
+local code = os.execute(string.format("/usr/sbin/whitelist add %s '%s@%s login at %s'",
+  addr, user, string.gsub(hostname, "'", "'\\''"), os.date("%Y-%m-%d %H:%M:%S")))
+if code == 2*256 then
+	err("Network error", "")
+elseif code ~= 0 then
+	err("Internal error", "white listing failed")
+end
+
+local q = os.getenv("QUERY_STRING") or ""
+local params = http.urldecode_params(q)
+local url = "/cgi-bin/epoint/status"
+if params["G"] and params["G"] ~= "" then
+	url = url .. "?G=" .. protocol.urlencode(params["G"])
+end
+
+io.write(
+	"Status: 303 See Other\r\n" ..
+	"Content-Type: text/html; charset=utf-8\r\n" ..
+	"Location: " .. url .. "\r\n")
+epoint.i18n.cgi_set_language_cookie()
+io.write(
+	"\r\n" ..
+	"<html><body><a href=\"" .. url .. "\">see other</a></body></html>\n")

@@ -1,0 +1,40 @@
+<%-
+require("epoint.i18n")
+require("luci.http.protocol")
+t = epoint.i18n.translate
+-%>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+  <title>ePoint</title>
+  <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="/epoint-static/epoint-fill.css">
+  <link rel="icon" type="image/x-icon" href="/epoint-static/epoint.ico">
+  <link rel="shortcut icon" type="image/x-icon" href="/epoint-static/epoint.ico">
+  <script type="text/javascript">
+  function setFocus() {
+    document.getElementById("rand").focus();
+  }
+  </script>
+</head>
+<body onload="setFocus();">
+  <div id="header">
+  </div>
+
+  <div class="content">
+    <p><%=errormsg%></p>
+    <p>Total ePoints uploaded in this session: </p>
+    <div id="counter"><p><%=total%> EPT</p></div>
+    <p><a href="<%=self%>" class="reset">Reset</a></p>
+    <form method="POST" action="<%=self%>">
+      <p>Enter ePoint RAND:</p>
+      <p><input type="text" id="rand" name="rand" value="<%=rand%>"></p>
+      <input type="hidden" name="total" value="<%=total%>">
+    </form>
+  </div>
+
+  <div id="footer">
+    <p>ePoint Systems Ltd.</p>
+  </div>
+</body>
+</html>
