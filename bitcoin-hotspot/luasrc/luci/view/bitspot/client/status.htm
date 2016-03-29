@@ -1,0 +1,60 @@
+<%-
+require("epoint.i18n")
+require("luci.http.protocol")
+t = epoint.i18n.translate
+-%>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+    <title>ePoint bitcoin hotspot</title>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="/epoint-static/epoint-splash.css">
+    <link rel="icon" type="image/x-icon" href="/epoint-static/epoint.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/epoint-static/epoint.ico">
+    <script language="javascript" type="text/javascript">
+    <!--
+    setTimeout(function(){window.location.reload();}, 60000);
+    //-->
+    </script>
+    <noscript>
+    <meta http-equiv="Refresh" content="60">
+    </noscript>
+</head>
+<body>
+    <div id="header">
+        <img src="/epoint-static/ephs.png" alt="ePoint HotSpot">
+        <h1><%= t("Status") %></h1>
+<!--
+<%- if loggedin and redirect_url then
+    write(string.format("<p>%s</p>", t("Thank you!")))
+end -%>
+-->
+    </div>
+
+    <div class="content">
+    <p>
+    <%= t("Remaining time:") .. " " .. status %>
+    </p><p>
+<%- if loggedin and not longterm then -%>
+    <a href="/cgi-bin/bitspot/logout"><%= t("You can log out here") %></a>.
+    (<%= t("Your access will be permanently removed") %>)
+<%- end -%>
+    </p><p>
+<%- if loggedin and redirect_url then
+    local s = t("You can now visit %s.")
+    write(string.format(s, "<a target='_blank' href='" .. redirect_url .. "'>" .. redirect_url .. "</a>"))
+end -%>
+<%- if not whitelisted then -%>
+    </p><p>
+    <a href="/cgi-bin/bitspot/form"><%= t("Buy more time") %></a>.
+<%- end -%>
+    </p><p>
+    <%= t("You can safely close this window.") %>
+    </p>
+    </div>
+
+    <div id="footer">
+        <p>ePoint Systems Ltd.</p>
+    </div>
+</body>
+</html>

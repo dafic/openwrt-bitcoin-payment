@@ -1,0 +1,54 @@
+#!/usr/bin/lua
+-- Copyright (C) 2010 ePoint Systems Ltd.
+
+local http = require("luci.http.protocol")
+local protocol = require("epoint.protocol")
+local acl = require("epoint.acl")
+require("uci")
+require("luci.template")
+
+-- get query string 
+local qs = os.getenv("QUERY_STRING") or ""
+
+-- get url parameters
+local params = http.urldecode_params(qs)
+
+QUERY = ""
+redirect_url = params and params["G"] or nil
+if redirect_url then
+	QUERY = "?G=" .. protocol.urlencode(redirect_url)
+	redirect_url = redirect_url:gsub("&", "&amp;"):gsub("\"", "&quot;")
+end
+
+-- get remote address
+local addr = os.getenv("REMOTE_ADDR")
+
+-- check if given address has access
+local ok, lt, time = hasaccess(addr)
+loggedin = ok
+longterm = lt
+whitelisted = false
+status = ""
+
+-- if has access, then check for time or whitelist
+if ok then
+	if time then
+		local hours = math.floor(time / 3600)
+		local minutes = math.floor((time - 3600*hours)/60 + 0.5) -- rounded
+		if hours > 0 then
+			status = fmt("%d hour", hours) .. " " .. fmt("%d minute", minutes)
+		else
+			status = fmt("%d minute", minutes)
+		end
+	else
+		whitelisted = true
+		status = "Unlimited access"
+	end
+else
+	status = "No access"
+end
+
+io.write("Content-Type: text/html; charset=utf-8\r\n")
+epoint.i18n.cgi_set_language_cookie()
+io.write("\r\n")
+luci.template.render("epoint/client/status")
